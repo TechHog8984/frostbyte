@@ -5,7 +5,7 @@
 #include "libraries/drawentrylib.hpp"
 #include "ltable.h"
 #include "taskscheduler.hpp"
-#include "environment/debuglib.hpp"
+#include "libraries/debuglib.hpp"
 
 #include "classes/roblox/userinputservice.hpp"
 
@@ -219,7 +219,7 @@ static int fr_iscclosure(lua_State* L) {
     return 1;
 }
 
-static int fr_getrawmetatable(lua_State* L) {
+int fr_getrawmetatable(lua_State* L) {
     luaL_checkany(L, 1);
 
     if (!lua_getmetatable(L, 1))
@@ -227,7 +227,7 @@ static int fr_getrawmetatable(lua_State* L) {
     return 1;
 }
 
-static int fr_setrawmetatable(lua_State* L) {
+int fr_setrawmetatable(lua_State* L) {
     luaL_checkany(L, 1);
     luaL_argexpected(L, lua_isnil(L, 2) || lua_istable(L, 2), 2, "nil or table");
     if (lua_gettop(L) > 2)

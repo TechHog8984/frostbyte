@@ -17,6 +17,9 @@ namespace frostbyte {
 
 int fr_getreg(lua_State* L);
 
+int fr_getrawmetatable(lua_State* L);
+int fr_setrawmetatable(lua_State* L);
+
 void open_frostbyte_environment(lua_State* L);
 
 }; // namespace frostbyte

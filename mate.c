@@ -17,7 +17,6 @@ int main() {
     AddFile(executable, "./src/classes/roblox/*.cpp");
     AddFile(executable, "./src/classes/roblox/custom/*.cpp");
     AddFile(executable, "./src/classes/roblox/datatypes/*.cpp");
-    AddFile(executable, "./src/environment/*.cpp");
     AddFile(executable, "./src/libraries/*.cpp");
     AddFile(executable, "./src/ui/*.cpp");
 

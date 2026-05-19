@@ -1,0 +1,366 @@
+#include "libraries/debuglib.hpp"
+#include "common.hpp"
+#include "environment.hpp"
+
+#include "lapi.h"
+#include "lfunc.h"
+#include "lgc.h"
+#include "lobject.h"
+#include "lstate.h"
+#include "lstring.h"
+#include "lua.h"
+#include "lualib.h"
+
+namespace frostbyte {
+
+// from ldebug.cpp's  lua_getinfo
+Closure* levelToClosure(lua_State* L, int level) {
+    Closure* f = nullptr;
+    CallInfo* ci = nullptr;
+
+    if (level < 0) {
+        // element has to be within stack
+        if (-level > L->top - L->base)
+            return 0;
+
+        StkId func = L->top + level;
+
+        // and it has to be a function
+        if (!ttisfunction(func))
+            return 0;
+
+        f = clvalue(func);
+    } else if (unsigned(level) < unsigned(L->ci - L->base_ci)) {
+        ci = L->ci - level;
+        LUAU_ASSERT(ttisfunction(ci->func));
+        f = clvalue(ci->func);
+    }
+
+    return f;
+}
+
+int checkStackLevel(lua_State* L, int level) {
+    if (level < 1) {
+        lua_pushstring(L, "stack level cannot be less than 1");
+        lua_error(L);
+    } else if (level >= lua_stackdepth(L)) {
+        lua_pushstring(L, "stack level is too high");
+        lua_error(L);
+    }
+    return 1;
+}
+
+Closure* getClosure(lua_State* L, int index) {
+    Closure* f = nullptr;
+
+    int type = lua_type(L, index);
+
+    switch (type) {
+        case LUA_TNUMBER: {
+            int level = lua_tointeger(L, 1);
+            checkStackLevel(L, level);
+
+            f = levelToClosure(L, level);
+            break;
+        } case LUA_TFUNCTION:
+            f = clvalue(luaA_toobject(L, index));
+            break;
+        default:
+            luaL_error(L, "invalid argument #%d to %s (expected number or function, got %s)", index, currfuncname(L), lua_typename(L, type));
+            break;
+    }
+
+    return f;
+}
+
+void checkLClosure(lua_State* L, int narg, Closure* closure) {
+    if (closure->isC)
+        luaL_error(L, "invalid argument #%d to %s (expected Lua closure, got C closure)", narg, currfuncname(L));
+}
+
+lua_State* optionalThread(lua_State* L, int narg) {
+    lua_State* thread = L;
+    if (!lua_isnone(L, narg)) {
+        luaL_checktype(L, narg, LUA_TTHREAD);
+        thread = lua_tothread(L, narg);
+    }
+
+    return thread;
+}
+
+int fr_debug_validlevel(lua_State* L) {
+    int level = luaL_checkinteger(L, 1);
+    lua_State* thread = optionalThread(L, 2);
+
+    CallInfo* ci = thread->base_ci;
+    CallInfo* end_ci = thread->ci;
+
+    int max = end_ci - ci;
+    lua_pushboolean(L, level <= max);
+    lua_gettop(L);
+    return 1;
+}
+int fr_debug_getcallstack(lua_State* L) {
+    lua_State* thread = optionalThread(L, 1);
+
+    CallInfo* ci = thread->base_ci;
+    CallInfo* end_ci = thread->ci;
+
+    lua_createtable(L, end_ci - ci, 0);
+    int table = lua_absindex(L, -1);
+
+    int index = 0;
+    do {
+        ci++;
+
+        lua_pushnumber(L, ++index);
+        luaA_pushobject(L, ci->func);
+        lua_settable(L, table);
+    } while (ci < end_ci);
+
+    return 1;
+}
+
+int fr_debug_getprotos(lua_State* L) {
+    Closure* closure = getClosure(L, 1);
+    checkLClosure(L, 1, closure);
+    Proto* p = closure->l.p;
+
+    lua_createtable(L, p->sizep, 0);
+    int table = lua_absindex(L, -1);
+
+    for (int i = 0; i < p->sizep; i++) {
+        lua_pushnumber(L, i + 1);
+
+        Closure* lclosure = luaF_newLclosure(L, p->p[i]->nups, closure->env, p->p[i]);
+        lua_pushnil(L);
+        setclvalue(L, L->top - 1, lclosure);
+
+        lua_settable(L, table);
+    }
+
+    return 1;
+}
+int fr_debug_getproto(lua_State* L) {
+    Closure* closure = getClosure(L, 1);
+    checkLClosure(L, 1, closure);
+    Proto* p = closure->l.p;
+
+    int index = luaL_checknumberrange(L, 2, 1, p->sizep, "index");
+
+    Closure* lclosure = luaF_newLclosure(L, p->p[index - 1]->nups, closure->env, p->p[index - 1]);
+    lua_pushnil(L);
+    setclvalue(L, L->top - 1, lclosure);
+
+    return 1;
+}
+// apparently unsafe, should look into this
+// int fr_debug_setproto(lua_State* L) {
+//     Closure* closure = getClosure(L, 1);
+//     checkLClosure(L, 1, closure);
+//     Proto* p = closure->l.p;
+
+//     int index = luaL_checknumberrange(L, 2, 1, p->sizep, "index");
+
+//     Closure* value = getClosure(L, 3);
+//     checkLClosure(L, 3, value);
+
+//     *p->p[index - 1] = *value->l.p;
+
+//     return 0;
+// }
+
+int fr_debug_getconstant(lua_State* L) {
+    Closure* closure = getClosure(L, 1);
+    checkLClosure(L, 1, closure);
+    Proto* p = closure->l.p;
+
+    int index = luaL_checknumberrange(L, 2, 1, p->sizek, "index");
+
+    luaA_pushobject(L, &p->k[index - 1]);
+
+    return 1;
+}
+int fr_debug_getconstants(lua_State* L) {
+    Closure* closure = getClosure(L, 1);
+    checkLClosure(L, 1, closure);
+    Proto* p = closure->l.p;
+
+    lua_createtable(L, p->sizek, 0);
+    int table = lua_absindex(L, -1);
+
+    for (int i = 0; i < p->sizek; i++) {
+        lua_pushnumber(L, i + 1);
+        luaA_pushobject(L, &p->k[i]);
+        lua_settable(L, table);
+    }
+
+    return 1;
+}
+int fr_debug_setconstant(lua_State* L) {
+    Closure* closure = getClosure(L, 1);
+    checkLClosure(L, 1, closure);
+    Proto* p = closure->l.p;
+
+    int index = luaL_checknumberrange(L, 2, 1, p->sizek, "index");
+    luaL_checkany(L, 3);
+
+    int valuet = lua_type(L, 3);
+    if (valuet == LUA_TNIL || valuet == LUA_TBOOLEAN || valuet == LUA_TNUMBER ||
+        valuet == LUA_TVECTOR || valuet == LUA_TSTRING || valuet == LUA_TTABLE ||
+        valuet == LUA_TFUNCTION)
+    {
+        setobj(L, &p->k[index - 1], luaA_toobject(L, 3));
+    } else
+        luaL_error(L, "invalid argument #3 to getconstants (expected nil, boolean, number, vector, string, table, or function, got %s", lua_typename(L, valuet));
+
+    return 0;
+}
+
+int fr_debug_getupvalue(lua_State* L) {
+    Closure* closure = getClosure(L, 1);
+    checkLClosure(L, 1, closure); // TODO: toggle allowing C closures
+
+    int index = luaL_checknumberrange(L, 2, 1, closure->nupvalues, "index");
+
+    lua_getupvalue(L, 1, index);
+
+    return 1;
+}
+int fr_debug_getupvalues(lua_State* L) {
+    Closure* closure = getClosure(L, 1);
+    checkLClosure(L, 1, closure); // TODO: toggle allowing C closures
+
+    lua_createtable(L, closure->nupvalues, 0);
+    int table = lua_absindex(L, -1);
+
+    for (int i = 0; i < closure->nupvalues; i++) {
+        lua_pushnumber(L, i + 1);
+        TValue* r = &closure->l.uprefs[i];
+        r = ttisupval(r) ? upvalue(r)->v : r;
+        luaA_pushobject(L, r);
+        lua_settable(L, table);
+    }
+
+    return 1;
+}
+int fr_debug_setupvalue(lua_State* L) {
+    Closure* closure = getClosure(L, 1);
+    checkLClosure(L, 1, closure); // TODO: toggle allowing C closures
+
+    // setupvalue expects value to be at top
+    if (lua_gettop(L) > 3)
+        luaL_error(L, "too many arguments to %s", currfuncname(L));
+
+    int index = luaL_checknumberrange(L, 2, 1, closure->nupvalues, "index");
+
+    lua_setupvalue(L, 1, index);
+
+    return 0;
+}
+int fr_debug_upvaluejoin(lua_State* L) {
+    Closure* closure_1 = getClosure(L, 1);
+    Closure* closure_2 = getClosure(L, 3);
+    checkLClosure(L, 1, closure_1); // TODO: toggle allowing C closures
+    checkLClosure(L, 3, closure_2); // TODO: toggle allowing C closures
+
+    int n_1 = luaL_checknumberrange(L, 2, 1, closure_1->nupvalues, "n1");
+    int n_2 = luaL_checknumberrange(L, 4, 1, closure_2->nupvalues, "n2");
+
+    TValue* o_1 = &closure_1->l.uprefs[n_1 - 1];
+    TValue* o_2 = &closure_2->l.uprefs[n_2 - 1];
+
+    *o_1 = *o_2;
+
+    return 0;
+}
+
+int fr_debug_getstack(lua_State* L) {
+    int level = luaL_checkinteger(L, 1);
+    CallInfo* ci = L->ci - level;
+    LUAU_ASSERT(ttisfunction(ci->func));
+
+    int top = ci->top - ci->base;
+
+    if (lua_isnone(L, 2)) {
+        lua_createtable(L, top, 0);
+        int table = lua_absindex(L, -1);
+
+        int index = 0;
+        for (StkId val = ci->base; val < ci->top; ++val) {
+            lua_pushnumber(L, ++index);
+            luaA_pushobject(L, val);
+            lua_settable(L, table);
+        }
+
+        return 1;
+    }
+
+    int index = luaL_checknumberrange(L, 2, 1, top, "index");
+    luaA_pushobject(L, ci->base + index - 1);
+
+    return 1;
+}
+int fr_debug_setstack(lua_State* L) {
+    int level = luaL_checkinteger(L, 1);
+    CallInfo* ci = L->ci - level;
+    LUAU_ASSERT(ttisfunction(ci->func));
+
+    int top = ci->top - ci->base;
+
+    int index = luaL_checknumberrange(L, 2, 1, top, "index");
+    luaA_pushobject(L, ci->base + index - 1);
+
+    luaL_checkany(L, 3);
+
+    *(ci->base + index - 1) = *luaA_toobject(L, 3);
+
+    return 0;
+}
+
+int fr_debug_setname(lua_State* L) {
+    Closure* closure = getClosure(L, 1);
+
+    size_t l;
+    const char* name = luaL_checklstring(L, 2, &l);
+
+    if (closure->isC)
+        closure->c.debugname = name;
+    else
+        closure->l.p->debugname = luaS_newlstr(L, name, l);
+
+    return 0;
+}
+
+void open_debuglib(lua_State* L) {
+    lua_getglobal(L, "debug");
+
+    setfunctionfield(L, fr_debug_validlevel, "validlevel");
+    setfunctionfield(L, fr_debug_getcallstack, "getcallstack");
+
+    setfunctionfield(L, fr_debug_getprotos, "getprotos");
+    setfunctionfield(L, fr_debug_getproto, "getproto");
+    // setfunctionfield(L, fr_debug_setproto, "setproto");
+
+    setfunctionfield(L, fr_debug_getconstant, "getconstant");
+    setfunctionfield(L, fr_debug_getconstants, "getconstants");
+    setfunctionfield(L, fr_debug_setconstant, "setconstant");
+
+    setfunctionfield(L, fr_debug_getupvalue, "getupvalue");
+    setfunctionfield(L, fr_debug_getupvalues, "getupvalues");
+    setfunctionfield(L, fr_debug_setupvalue, "setupvalue");
+    setfunctionfield(L, fr_debug_upvaluejoin, "upvaluejoin");
+
+    setfunctionfield(L, fr_debug_getstack, "getstack");
+    setfunctionfield(L, fr_debug_setstack, "setstack");
+
+    setfunctionfield(L, fr_getrawmetatable, "getmetatable");
+    setfunctionfield(L, fr_setrawmetatable, "setmetatable");
+    setfunctionfield(L, fr_getreg, "getregistry");
+
+    setfunctionfield(L, fr_debug_setname, "setname");
+
+    lua_pop(L, 1);
+}
+
+}
