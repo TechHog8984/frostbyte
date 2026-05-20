@@ -7,12 +7,10 @@
 #include "lfunc.h"
 #include "lgc.h"
 #include "lobject.h"
-#include "lstate.h"
 #include "lstring.h"
 #include "lua.h"
 #include "luaconf.h"
 #include "lualib.h"
-#include <variant>
 
 namespace frostbyte {
 

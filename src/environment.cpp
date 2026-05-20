@@ -252,7 +252,7 @@ static int fr_issafeenv(lua_State* L) {
     return 1;
 }
 
-static int fr_rawtfreeze(lua_State* L) {
+static int fr_trawfreeze(lua_State* L) {
     luaL_checktype(L, 1, LUA_TTABLE);
     luaL_argcheck(L, !lua_getreadonly(L, 1), 1, "table is already frozen");
 
@@ -261,7 +261,7 @@ static int fr_rawtfreeze(lua_State* L) {
     lua_pushvalue(L, 1);
     return 1;
 }
-static int fr_rawtunfreeze(lua_State* L) {
+static int fr_trawunfreeze(lua_State* L) {
     luaL_checktype(L, 1, LUA_TTABLE);
     luaL_argcheck(L, lua_getreadonly(L, 1), 1, "table is not frozen");
 
@@ -432,12 +432,9 @@ void open_frostbyte_environment(lua_State *L) {
 
     {
     lua_getglobal(L, "table");
-    lua_pushcfunction(L, fr_rawtfreeze, "rawfreeze");
-    lua_rawsetfield(L, -2, "rawfreeze");
-    lua_pushcfunction(L, fr_rawtunfreeze, "rawunfreeze");
-    lua_rawsetfield(L, -2, "rawunfreeze");
-    lua_pushcfunction(L, fr_tsetfrozen, "setfrozen");
-    lua_rawsetfield(L, -2, "setfrozen");
+    setfunctionfield(L, fr_trawfreeze, "rawfreeze");
+    setfunctionfield(L, fr_trawunfreeze, "rawunfreeze");
+    setfunctionfield(L, fr_tsetfrozen, "setfrozen");
 
     lua_pop(L, 1);
     }
