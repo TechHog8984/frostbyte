@@ -453,7 +453,15 @@ int fr_debug_setstack(lua_State* L) {
 
     luaL_checkany(L, 3);
 
-    *(ci->base + index - 1) = *luaA_toobject(L, 3);
+
+    TValue* original = ci->base + index - 1;
+    const TValue* replacement = luaA_toobject(L, 3);
+
+    // TODO: an error that is more specific to this function
+    if (replacement->tt != original->tt)
+        luaL_typeerror(L, 3, lua_typename(L, original->tt));
+
+    *original = *replacement;
 
     return 0;
 }
