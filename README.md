@@ -12,7 +12,7 @@ This project is in early development stages! This is why there is no Windows sup
 
 In addition, I am frequently making drastic changes on my local machine before pushing to GitHub (I bounce back and forth between areas) so the state of the project rarely matches what is public.
 
-[Issues](issues), however, usually closely match the project's real state.
+[Issues](../../issues), however, usually closely match the project's real state.
 
 # BUILDING
 NOTE: frostbyte CURRENTLY does _not_ have a process for building neither for or on Windows. It is likely possible to cross compile via mingw, but that would require manual steps.
