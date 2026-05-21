@@ -21,8 +21,7 @@ void rbxScriptConnection::destroy(lua_State* L) {
     lua_pop(L, 1);
     n--;
     if (n) {
-        lua_pushnumber(L, n);
-        lua_rawset(L, -3);
+        lua_rawseti(L, -2, n);
     } else {
         lua_pushnil(L);
         lua_rawset(L, -3);

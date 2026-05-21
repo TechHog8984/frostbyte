@@ -91,13 +91,15 @@ namespace Enum_methods {
     static int getEnumItems(lua_State* L) {
         Enum* _enum = lua_checkenum(L, 1);
 
+        if (lua_gettop(L) > 1)
+            luaL_error(L, "too many arguments to GetEnumItems! expected 1");
+
         lua_createtable(L, _enum->item_map.size(), 0);
 
         int i = 1;
         for (auto const& item : _enum->item_map) {
-            lua_pushnumber(L, i++);
             pushEnumItem(L, _enum->name, item.first);
-            lua_settable(L, 2);
+            lua_rawseti(L, 2, i++);
         }
 
         return 1;

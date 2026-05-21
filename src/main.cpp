@@ -394,8 +394,6 @@ int main(int argc, char** argv) {
         if (enable_tween_service)
             TweenService::process(appL);
 
-        TaskScheduler::run();
-
         int screen_width = GetScreenWidth();
         int screen_height = GetScreenHeight();
         rbxCamera::screen_size.x = screen_width;
@@ -776,6 +774,10 @@ int main(int argc, char** argv) {
             should_run_tests = false;
             startAllTests(testL);
         }
+
+        TaskScheduler::run();
+
+        RunService::heartbeat(appL);
 
         setInstanceValue<double>(Workspace::instance, appL, "DistributedGameTime", lua_clock() - initial_game_time);
     }

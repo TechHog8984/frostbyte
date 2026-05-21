@@ -145,9 +145,8 @@ void DrawEntry::destroy(lua_State* L, bool dont_erase) {
     userdata::getClassMetatable(L, userdata::DrawEntry);
     lua_getfield(L, -1, "objects");
 
-    lua_pushnumber(L, lookup_index);
     lua_pushnil(L);
-    lua_rawset(L, -3);
+    lua_rawseti(L, -2, lookup_index);
 
     lua_pop(L, 2);
 

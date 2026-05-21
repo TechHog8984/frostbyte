@@ -119,9 +119,8 @@ int fr_debug_getcallstack(lua_State* L) {
     do {
         ci++;
 
-        lua_pushnumber(L, ++index);
         luaA_pushobject(L, ci->func);
-        lua_settable(L, table);
+        lua_rawseti(L, table, ++index);
     } while (ci < end_ci);
 
     return 1;
@@ -321,15 +320,13 @@ int fr_debug_getprotos(lua_State* L) {
     int table = lua_absindex(L, -1);
 
     for (int i = 0; i < p->sizep; i++) {
-        lua_pushnumber(L, i + 1);
-
         Proto* original = p->p[i];
 
         Closure* lclosure = luaF_newLclosure(L, original->nups, closure->env, cloneProto(L, original));
         lua_pushnil(L);
         setclvalue(L, L->top - 1, lclosure);
 
-        lua_settable(L, table);
+        lua_rawseti(L, table, i + 1);
     }
 
     return 1;
@@ -388,13 +385,12 @@ int fr_debug_getconstants(lua_State* L) {
     int table = lua_absindex(L, -1);
 
     for (int i = 0; i < p->sizek; i++) {
-        lua_pushnumber(L, i + 1);
         const TValue* obj = &p->k[i];
         if (obj->tt == LUA_TFUNCTION)
             lua_newuserdata(L, 0);
         else
             luaA_pushobject(L, obj);
-        lua_settable(L, table);
+        lua_rawseti(L, table, i + 1);
     }
 
     return 1;
@@ -443,11 +439,10 @@ int fr_debug_getupvalues(lua_State* L) {
     int table = lua_absindex(L, -1);
 
     for (int i = 0; i < closure->nupvalues; i++) {
-        lua_pushnumber(L, i + 1);
         TValue* r = &closure->l.uprefs[i];
         r = ttisupval(r) ? upvalue(r)->v : r;
         luaA_pushobject(L, r);
-        lua_settable(L, table);
+        lua_rawseti(L, table, i + 1);
     }
 
     return 1;
@@ -500,9 +495,8 @@ int fr_debug_getstack(lua_State* L) {
 
         int index = 0;
         for (StkId val = ci->base; val < ci->top; ++val) {
-            lua_pushnumber(L, ++index);
             luaA_pushobject(L, val);
-            lua_settable(L, table);
+            lua_rawseti(L, table, ++index);
         }
 
         return 1;

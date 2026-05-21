@@ -677,9 +677,8 @@ static int fr_getinstances(lua_State* L) {
         auto child = rbxInstance::instance_list[i].lock();
         if (!child)
             continue;
-        lua_pushnumber(L, i + 1);
         lua_pushinstance(L, child);
-        lua_settable(L, -3);
+        lua_rawseti(L, -2, i + 1);
     }
 
     return 1;
@@ -711,9 +710,8 @@ static int fr_getnilinstances(lua_State* L) {
         if (!child)
             continue;
 
-        lua_pushnumber(L, i + 1);
         lua_pushinstance(L, child);
-        lua_settable(L, -3);
+        lua_rawseti(L, -2, i + 1);
     }
 
     return 1;

@@ -157,9 +157,10 @@ int fireRBXScriptSignalWithFilter(lua_State* L) {
     pushSignalConnectionList(L, 1);
     lua_remove(L, 1);
 
-    lua_pushnil(L);
-    while (lua_next(L, -2) != 0) {
-        lua_pushvalue(L, -4); // task.spawn
+    int count = lua_objlen(L, -1);
+    for (int i = count; i > 0; i--) {
+        lua_rawgeti(L, -1, i);
+        lua_pushvalue(L, -3); // task.spawn
         lua_pushvalue(L, -2); // connection
 
         rbxScriptConnection* connection = lua_checkrbxscriptconnection(L, -1);

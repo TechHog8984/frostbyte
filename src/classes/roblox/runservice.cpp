@@ -16,7 +16,7 @@ namespace frostbyte {
 
 std::shared_ptr<rbxInstance> RunService::instance;
 
-std::shared_mutex bind_list_mutex;
+// std::shared_mutex bind_list_mutex;
 
 static int compare(lua_State* L) {
     lua_rawgeti(L, 1, 1);
@@ -28,7 +28,7 @@ static int compare(lua_State* L) {
 
 namespace rbxInstance_RunService_methods {
     static int bindToRenderStep(lua_State* L) {
-        std::lock_guard lock(bind_list_mutex);
+        // std::lock_guard lock(bind_list_mutex);
 
         lua_checkinstance(L, 1, "RunService");
         const char* name = luaL_checkstring(L, 2);
@@ -59,6 +59,7 @@ namespace rbxInstance_RunService_methods {
 
         lua_rawseti(L, -2, lua_objlen(L, -2) + 1);
         lua_remove(L, -2);
+        // FIXME: do we need to keep a separate sorted list? based on Roblox docs, I am lead to believe that a lower priority entry should be ran before a higher priority entry on a universal, not local like it is currently, scale
         pushFunctionFromLookup(L, compare);
 
         lua_call(L, 2, 0);
@@ -80,7 +81,7 @@ namespace rbxInstance_RunService_methods {
     }
 
     static int unbindFromRenderStep(lua_State* L) {
-        std::lock_guard lock(bind_list_mutex);
+        // std::lock_guard lock(bind_list_mutex);
 
         lua_checkinstance(L, 1, "RunService");
         const char* name = luaL_checkstring(L, 2);
@@ -112,13 +113,13 @@ void fireEventWithDelta(lua_State* L, const char* event, std::shared_ptr<rbxInst
     lua_call(L, 2, 0);
 }
 
-double last_clock = lua_clock();
+double last_process = lua_clock();
 void RunService::process(lua_State *L) {
-    std::lock_guard lock(bind_list_mutex);
+    // std::lock_guard lock(bind_list_mutex);
 
     const double clock = lua_clock();
-    const double delta = clock - last_clock;
-    last_clock = clock;
+    const double delta = clock - last_process;
+    last_process = clock;
 
     lua_rawgetfield(L, LUA_REGISTRYINDEX, BINDLIST_KEY);
 
@@ -132,6 +133,7 @@ void RunService::process(lua_State *L) {
             // NOTE: in Roblox, if you task.wait unside the callback, there will be a normal error message.
             // this is like if we were to throw exception in startFunctionOnNewThread and handle error there but then not provide a feedback function
             TaskScheduler::startFunctionOnNewThread(L, [] (std::string error) {
+                Console::ScriptConsole.errorf("%.*s", (int) error.size(), error.data());
                 Console::ScriptConsole.errorf("RunService:fireRenderStepEarlyFunctions unexpected error while invoking callback: %.*s", (int) error.size(), error.data());
             }, 1);
 
@@ -143,9 +145,16 @@ void RunService::process(lua_State *L) {
 
     lua_pop(L, 1);
 
-    fireEventWithDelta(L, "RenderStepped", instance, delta);
-    // FIXME: instead of RunService::process, we need a RunService::preRender and RunService::postRender instead of just firing all these events (and the above bindtorenderstep stuff) here
     fireEventWithDelta(L, "PreRender", instance, delta);
+    fireEventWithDelta(L, "RenderStepped", instance, delta);
+}
+double last_heartbeat = lua_clock();
+void RunService::heartbeat(lua_State *L) {
+    const double clock = lua_clock();
+    const double delta = clock - last_heartbeat;
+    last_heartbeat = clock;
+
+    fireEventWithDelta(L, "Heartbeat", instance, delta);
 }
 
 void rbxInstance_RunService_init(lua_State* L) {
