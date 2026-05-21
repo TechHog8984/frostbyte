@@ -7,7 +7,6 @@
 #include <cmath>
 #include <cstring>
 
-#include "lnumutils.h"
 #include "lua.h"
 #include "lualib.h"
 

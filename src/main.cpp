@@ -17,6 +17,7 @@
 #include "engine/datatypes/color3.hpp"
 #include "engine/datatypes/colorsequence.hpp"
 #include "engine/datatypes/colorsequencekeypoint.hpp"
+#include "engine/datatypes/content.hpp"
 #include "engine/datatypes/numberrange.hpp"
 #include "engine/datatypes/numbersequence.hpp"
 #include "engine/datatypes/numbersequencekeypoint.hpp"
@@ -214,10 +215,11 @@ int main(int argc, char** argv) {
 
     open_filesystemlib(L);
     open_color3lib(L);
-    open_tasklib(L);
-    open_tweeninfolib(L);
     open_colorsequencekeypointlib(L);
     open_colorsequencelib(L);
+    open_contentlib(L);
+    open_tasklib(L);
+    open_tweeninfolib(L);
     open_numberrangelib(L);
     open_numbersequencekeypointlib(L);
     open_numbersequencelib(L);

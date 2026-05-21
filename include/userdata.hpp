@@ -5,24 +5,25 @@
 namespace frostbyte {
     namespace userdata {
         #define USERDATA_TYPES         \
-            X(Instance)                \
+            X(Color3)                  \
+            X(ColorSequenceKeypoint)   \
+            X(ColorSequence)           \
+            X(Content)                 \
             X(Enums)                   \
             X(Enum)                    \
             X(EnumItem)                \
-            X(RBXScriptConnection)     \
-            X(RBXScriptSignal)         \
-            X(Color3)                  \
-            X(Vector2)                 \
-            X(Vector3)                 \
+            X(Instance)                \
             X(NumberRange)             \
             X(NumberSequenceKeypoint)  \
             X(NumberSequence)          \
-            X(ColorSequenceKeypoint)   \
-            X(ColorSequence)           \
-            X(TweenInfo)               \
+            X(RBXScriptConnection)     \
+            X(RBXScriptSignal)         \
             X(Rect)                    \
+            X(TweenInfo)               \
             X(UDim)                    \
             X(UDim2)                   \
+            X(Vector2)                 \
+            X(Vector3)                 \
                                        \
             X(InstructionWrapper)      \
             X(DrawEntry)

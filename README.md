@@ -59,7 +59,8 @@ That's it! To build again, simply run `./mate` just like before and it will dete
 
 # GOALS
 * Instance system
-* 1:1 Roblox error messages
+* ~~1:1 Roblox error messages~~
+* intuitive error messages
 * input
 * 2d graphics
 * sound
