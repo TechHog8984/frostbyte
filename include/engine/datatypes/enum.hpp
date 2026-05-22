@@ -12,6 +12,7 @@ public:
     std::string name;
     std::string enum_name;
     unsigned int value = 0;
+    int lookup = 0;
 };
 
 class Enum {
@@ -20,6 +21,7 @@ public:
 
     std::string name;
     std::map<std::string, EnumItem> item_map;
+    int lookup = 0;
 };
 
 struct EnumItemWrapper {

@@ -11,12 +11,21 @@ namespace frostbyte {
 std::map<std::string, Enum> Enum::enum_map;
 
 int pushEnumTable(lua_State* L, std::string name) {
-    return pushFromLookup(L, ENUMLOOKUP, [&L, name] { lua_pushstring(L, name.c_str()); }, [&L, name] {
+    lua_rawgetfield(L, LUA_REGISTRYINDEX, ENUMLOOKUP);
+
+    Enum* _enum = &Enum::enum_map.at(name);
+    int* lookup = &_enum->lookup;
+
+    if (*lookup) {
+        lua_rawgeti(L, -1, *lookup);
+        return 1;
+    }
+
+    *lookup = addToLookup(L, [&L, &_enum] {
         lua_createtable(L, 2, 0);
 
-        Enum* enum_ptr = static_cast<Enum*>(lua_newuserdatatagged(L, sizeof(Enum), userdata::Enum));
-        new(enum_ptr) Enum;
-        *enum_ptr = Enum::enum_map.at(name);
+        Enum** enum_ptr = static_cast<Enum**>(lua_newuserdatatagged(L, sizeof(Enum*), userdata::Enum));
+        *enum_ptr = _enum;
 
         userdata::getClassMetatable(L, userdata::Enum);
         lua_setmetatable(L, -2);
@@ -24,9 +33,9 @@ int pushEnumTable(lua_State* L, std::string name) {
         lua_rawseti(L, -2, 1);
 
         lua_newtable(L);
-
         lua_rawseti(L, -2, 2);
-    });
+    }, true);
+    return 1;
 }
 int pushEnum(lua_State* L, std::string name) {
     assert(pushEnumTable(L, name) == 1);
@@ -39,11 +48,16 @@ int pushEnumItem(lua_State* L, std::string enum_name, std::string name) {
     assert(lua_rawgeti(L, -1, 2) != LUA_TNIL);
     lua_remove(L, -2);
 
-    EnumItem enum_item = Enum::enum_map.at(enum_name).item_map.at(name);
+    EnumItem* enum_item = &Enum::enum_map.at(enum_name).item_map.at(name);
+    int* lookup = &enum_item->lookup;
 
-    addToLookup(L, [&L, &enum_item] {
-        EnumItem* enum_item_ptr = static_cast<EnumItem*>(lua_newuserdatatagged(L, sizeof(EnumItem), userdata::EnumItem));
-        new(enum_item_ptr) EnumItem;
+    if (*lookup) {
+        lua_rawgeti(L, -1, *lookup);
+        return 1;
+    }
+
+    *lookup = addToLookup(L, [&L, &enum_item] {
+        EnumItem** enum_item_ptr = static_cast<EnumItem**>(lua_newuserdatatagged(L, sizeof(EnumItem*), userdata::EnumItem));
         *enum_item_ptr = enum_item;
 
         userdata::getClassMetatable(L, userdata::EnumItem);
@@ -67,18 +81,9 @@ EnumItem* getEnumItemFromValue(const char* enum_name, unsigned int value) {
     return nullptr;
 }
 
-static void Enum__dtor(lua_State* L, void* ud) {
-    Enum* enum_ptr = static_cast<Enum*>(ud);
-    enum_ptr->~Enum();
-}
-static void EnumItem__dtor(lua_State* L, void* ud) {
-    EnumItem* enum_item_ptr = static_cast<EnumItem*>(ud);
-    enum_item_ptr->~EnumItem();
-}
-
 Enum* lua_checkenum(lua_State* L, int narg) {
     void* ud = userdata::check(L, narg, userdata::Enum);
-    return static_cast<Enum*>(ud);
+    return *static_cast<Enum**>(ud);
 }
 
 static int Enum__tostring(lua_State* L) {
@@ -168,9 +173,7 @@ static int Enum__namecall(lua_State* L) {
 
 EnumItem* checkEnumItem(lua_State* L, int narg) {
     void* ud = userdata::check(L, narg, userdata::EnumItem);
-    auto enum_item = static_cast<EnumItem*>(ud);
-
-    return enum_item;
+    return *static_cast<EnumItem**>(ud);
 }
 EnumItem* lua_checkenumitem(lua_State* L, int narg, const char* expected_enum) {
     // we need an expected_enum because we also have value and name checks
@@ -254,7 +257,7 @@ static int Enums__index(lua_State* L) {
 
 void setup_enums(lua_State* L) {
     // enumlookup
-    newweaktable(L);
+    lua_createtable(L, 5, 0);
     lua_setfield(L, LUA_REGISTRYINDEX, ENUMLOOKUP);
 
     // Enum
@@ -286,9 +289,6 @@ void setup_enums(lua_State* L) {
     setfunctionfield(L, EnumItem__eq, "__eq", nullptr);
 
     lua_pop(L, 1);
-
-    lua_setuserdatadtor(L, userdata::Enum, Enum__dtor);
-    lua_setuserdatadtor(L, userdata::EnumItem, EnumItem__dtor);
 }
 
 }; // namespace frostbyte
