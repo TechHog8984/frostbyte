@@ -255,9 +255,11 @@ void UserInputService::signalMouseMovement(std::shared_ptr<rbxInstance> instance
 int global_mouse_wheel = 0;
 bool UserInputService::is_window_focused = false;
 Vector2 UserInputService::mouse_position = GetMousePosition();
+Vector2 UserInputService::mouse_delta{ 0.f, 0.f };
+std::weak_ptr<rbxInstance> last_input;
 
 void UserInputService::process(lua_State *L, bool anyImGui) {
-    const Vector2 mouse_delta = GetMouseDelta();
+    UserInputService::mouse_delta = GetMouseDelta();
     UserInputService::mouse_position = GetMousePosition();
     const Vector2 mouse_wheel_vector = GetMouseWheelMoveV();
 
@@ -265,8 +267,11 @@ void UserInputService::process(lua_State *L, bool anyImGui) {
     const int mouse_wheel = mouse_wheel_y ? (mouse_wheel_y > 0 ? 1 : -1) : 0;
 
     const bool is_window_focused = IsWindowFocused();
-    if (is_window_focused != UserInputService::is_window_focused)
+    if (is_window_focused != UserInputService::is_window_focused) {
         signalMouseMovement(nullptr, is_window_focused ? InputBegan : InputEnded);
+
+        genericFire(L, ServiceProvider::service_map.at("UserInputService"), is_window_focused ? "WindowFocused" : "WindowFocusReleased");
+    }
     UserInputService::is_window_focused = is_window_focused;
 
     for (unsigned int mouse = 0; mouse < 3; mouse++) {
@@ -397,6 +402,7 @@ void UserInputService::process(lua_State *L, bool anyImGui) {
             key_code = &Enum::enum_map.at("KeyCode").item_map.at(key_code_name);
             user_input_type = &Enum::enum_map.at("UserInputType").item_map.at(user_input_type_name);
         }
+        last_input = input_object;
 
         if (event.state == InputEnded)
             input_object_array[array_index].reset();
@@ -519,10 +525,65 @@ void UserInputService::process(lua_State *L, bool anyImGui) {
 #undef keyShifted
 
 namespace rbxInstance_UserInputService_methods {
+    static int getKeysPressed(lua_State* L) {
+        lua_checkinstance(L, 1, "UserInputService");
+
+        lua_newtable(L);
+
+        int index = 0;
+        for (unsigned int key = 0; key < MAX_KEYBOARD_KEYS; key++) {
+            const bool down = IsKeyDown(key);
+
+            if (!down)
+                continue;
+
+            std::shared_ptr<rbxInstance> input_object = input_object_array[key];
+
+            lua_pushinstance(L, input_object);
+            lua_rawseti(L, -2, ++index);
+        }
+
+        return 1;
+    }
+    static int getLastInputType(lua_State *L) {
+        lua_checkinstance(L, 1, "UserInputService");
+
+        if (auto ptr = last_input.lock())
+            pushEnumItem(L, getInstanceValue<EnumItem*>(ptr, "UserInputType"));
+        else
+            lua_pushnil(L);
+
+        return 1;
+    }
+    static int getMouseDelta(lua_State* L) {
+        lua_checkinstance(L, 1, "UserInputService");
+
+        return pushVector2(L, UserInputService::mouse_delta);
+    }
     static int getMouseLocation(lua_State* L) {
         lua_checkinstance(L, 1, "UserInputService");
 
         return pushVector2(L, UserInputService::mouse_position);
+    }
+    static int getMouseButtonsPressed(lua_State* L) {
+        lua_checkinstance(L, 1, "UserInputService");
+
+        lua_newtable(L);
+
+        int index = 0;
+        for (unsigned int mouse = 0; mouse < 3; mouse++) {
+            const bool down = IsMouseButtonDown(mouse);
+
+            if (!down)
+                continue;
+
+            std::shared_ptr<rbxInstance> input_object = input_object_array[MAX_KEY + 1 + mouse];
+
+            lua_pushinstance(L, input_object);
+            lua_rawseti(L, -2, ++index);
+        }
+
+        return 1;
     }
     static int isKeyDown(lua_State* L) {
         lua_checkinstance(L, 1, "UserInputService");
@@ -563,7 +624,11 @@ namespace rbxInstance_UserInputService_methods {
 void rbxInstance_UserInputService_init() {
     UserInputService::signalMouseMovement(nullptr, InputBegan);
 
+    rbxClass::class_map["UserInputService"]->methods["GetKeysPressed"].func = rbxInstance_UserInputService_methods::getKeysPressed;
+    rbxClass::class_map["UserInputService"]->methods["GetLastInputType"].func = rbxInstance_UserInputService_methods::getLastInputType;
+    rbxClass::class_map["UserInputService"]->methods["GetMouseDelta"].func = rbxInstance_UserInputService_methods::getMouseDelta;
     rbxClass::class_map["UserInputService"]->methods["GetMouseLocation"].func = rbxInstance_UserInputService_methods::getMouseLocation;
+    rbxClass::class_map["UserInputService"]->methods["GetMouseButtonsPressed"].func = rbxInstance_UserInputService_methods::getMouseButtonsPressed;
     rbxClass::class_map["UserInputService"]->methods["IsKeyDown"].func = rbxInstance_UserInputService_methods::isKeyDown;
     rbxClass::class_map["UserInputService"]->methods["IsMouseButtonPressed"].func = rbxInstance_UserInputService_methods::isMouseButtonPressed;
 }
