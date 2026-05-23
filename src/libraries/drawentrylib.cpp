@@ -2,6 +2,7 @@
 
 #include "basedrawing.hpp"
 #include "common.hpp"
+#include "engine/datatypes/font.hpp"
 #include "userdata.hpp"
 
 #include "engine/classes/camera.hpp"
@@ -615,6 +616,15 @@ int DrawEntry__newindex(lua_State* L) {
                             luaL_error(L, "failed to detect valid type from font data; %s%s", FontLoader::SUPPORTED_FONT_TYPE_STRING, l == 0 ? ", got empty string" : "");
                         entry_text->custom_font_data = data;
                         entry_text->updateCustomFont();
+                    } else if (lua_type(L, 3) == LUA_TUSERDATA) {
+                        EngineFont* engine_font = lua_checkfont(L, 3);
+                        int index;
+                        auto pos = std::find(FontLoader::font_list.begin(), FontLoader::font_list.end(), engine_font->font);
+                        assert(pos != FontLoader::font_list.end());
+
+                        index = (int)(pos - FontLoader::font_list.begin());
+                        entry_text->font_index = index;
+                        entry_text->updateFont();
                     } else {
                         entry_text->font_index = luaL_checknumberrange(L, 3, 0, FontLoader::font_count - 1, "Font");
                         entry_text->updateFont();
