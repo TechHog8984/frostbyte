@@ -654,6 +654,7 @@ int DrawEntry__newindex(lua_State* L) {
                     entry_text->outline_color.a = luaL_checknumberrange(L, 3, 0, 1, "OutlineOpacity") * 255.f;
                 } else if (strequal(key, "Position")) {
                     entry_text->position = *lua_checkvector2(L, 3);
+                    entry_text->position.y += 2.f;
                     entry_text->updateOutline();
                 } else
                     goto INVALID;
