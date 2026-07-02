@@ -29,8 +29,7 @@ std::vector<DrawEntry*> DrawEntry::draw_list;
 void sortDrawList() {
     // std::lock_guard lock(DrawEntry::draw_list_mutex);
 
-    // TODO: use a std::set if stable sort is still possible (see drawingimmediate)
-    std::stable_sort(DrawEntry::draw_list.begin(), DrawEntry::draw_list.end(), [] (DrawEntry* a, DrawEntry* b) {
+    std::sort(DrawEntry::draw_list.begin(), DrawEntry::draw_list.end(), [] (DrawEntry* a, DrawEntry* b) {
         return a->zindex < b->zindex;
     });
 }
