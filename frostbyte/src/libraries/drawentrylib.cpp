@@ -31,7 +31,7 @@ void sortDrawList() {
 
     // TODO: use a std::set if stable sort is still possible (see drawingimmediate)
     std::stable_sort(DrawEntry::draw_list.begin(), DrawEntry::draw_list.end(), [] (DrawEntry* a, DrawEntry* b) {
-        return a->zindex > b->zindex;
+        return a->zindex < b->zindex;
     });
 }
 
