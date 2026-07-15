@@ -3,15 +3,18 @@
 #include "lua.h"
 
 #include <cstdint>
-#include <random>
 
 namespace frostbyte {
 
 struct Random {
     int64_t seed;
-    std::mt19937 rng;
+    uint64_t state = 0;
 
-    Random(int64_t seed): seed(seed), rng(seed) {}
+    Random(int64_t seed): seed(seed) {}
+
+    uint32_t nextUint();
+    int nextInteger(int min, int max);
+    double nextDouble();
 };
 
 Random* lua_checkrandom(lua_State* L, int narg);
