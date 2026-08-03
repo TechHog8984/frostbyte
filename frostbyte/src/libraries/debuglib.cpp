@@ -9,7 +9,6 @@
 #include "lfunc.h"
 #include "lgc.h"
 #include "lmem.h"
-#include "lobject.h"
 #include "lstring.h"
 #include "lua.h"
 #include "luaconf.h"
@@ -17,8 +16,8 @@
 
 namespace frostbyte {
 
-// from ldebug.cpp's  lua_getinfo
-Closure* levelToClosure(lua_State* L, int level, CallInfo** ci_out = nullptr) {
+// from ldebug.cpp's lua_getinfo
+Closure* levelToClosure(lua_State* L, int level, CallInfo** ci_out) {
     Closure* f = nullptr;
     CallInfo* ci = nullptr;
 
@@ -98,7 +97,7 @@ int fr_debug_validlevel(lua_State* L) {
     int level = luaL_checkinteger(L, 1);
     lua_State* thread = optionalThread(L, 2);
 
-    lua_pushboolean(L, level <= lua_stackdepth(thread));
+    lua_pushboolean(L, level < lua_stackdepth(thread));
     lua_gettop(L);
     return 1;
 }
@@ -492,6 +491,8 @@ int fr_debug_upvaluejoin(lua_State* L) {
 
 int fr_debug_getstack(lua_State* L) {
     int level = luaL_checkinteger(L, 1);
+    checkStackLevel(L, level);
+
     CallInfo* ci = L->ci - level;
     LUAU_ASSERT(ttisfunction(ci->func));
 
@@ -517,6 +518,8 @@ int fr_debug_getstack(lua_State* L) {
 }
 int fr_debug_setstack(lua_State* L) {
     int level = luaL_checkinteger(L, 1);
+    checkStackLevel(L, level);
+
     CallInfo* ci = L->ci - level;
     LUAU_ASSERT(ttisfunction(ci->func));
 
