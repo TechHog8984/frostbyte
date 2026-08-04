@@ -82,7 +82,7 @@ rbxInstance::rbxInstance(std::shared_ptr<rbxClass> _class) : _class(_class) {}
 lua_State* rbxInstance::destructorL = nullptr;
 
 rbxInstance::~rbxInstance() {
-    Console::ScriptConsole.debugf("destroying instance %s...", getValue<std::string>("ClassName").c_str());
+    // Console::ScriptConsole.debugf("destroying instance %s...", getValue<std::string>("ClassName").c_str());
 
     if (Frostbyte::isRunning() && destructorL && getTask(destructorL)) {
         auto global = destructorL->global;

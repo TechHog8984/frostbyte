@@ -41,9 +41,11 @@ namespace rbxInstance_StarterGui_methods {
 
                 auto notification_title = cloneInstance(L, notification_frame_title_template);
                 setInstanceValue<std::string>(notification_title, L, "Text", title);
+                setInstanceValue(notification_title, L, "TextSize", 20.f);
 
                 auto notification_text = cloneInstance(L, notification_frame_text_template);
                 setInstanceValue<std::string>(notification_text, L, "Text", text);
+                setInstanceValue(notification_text, L, "TextSize", 12.f);
 
                 setInstanceParent(L, notification_title, notification);
                 setInstanceParent(L, notification_text, notification);
@@ -68,9 +70,10 @@ void rbxInstance_StarterGui_init(lua_State* L) {
     setInstanceValue(notification_frame_title_template, L, "Size", UDim2{1, -100 * 2, 0, 18}, true);
     setInstanceValue(notification_frame_title_template, L, "Position", UDim2{0, 100, 0.5, -18}, true);
     setInstanceValue(notification_frame_title_template, L, "BackgroundTransparency", 1.f, true);
-    setInstanceValue(notification_frame_title_template,L, "Font", &Enum::enum_map.at("Font").item_map.at("SourceSansBold"));
-    // setInstanceValue(notification_frame_title_template,L, "FontSize", &Enum::enum_map.at("FontSize").item_map.at("Size18"));
-    setInstanceValue(notification_frame_title_template,L, "TextSize", 18.f);
+    setInstanceValue(notification_frame_title_template, L, "Font", &Enum::enum_map.at("Font").item_map.at("SourceSansBold"));
+    // setInstanceValue(notification_frame_title_template, L, "FontSize", &Enum::enum_map.at("FontSize").item_map.at("Size18"));
+    // TODO: why won't the template TextSizes transfer?
+    setInstanceValue(notification_frame_title_template, L, "TextSize", 20.f);
     setInstanceValue(notification_frame_title_template, L, "TextColor3", Color{247, 247, 247, 255}, true);
 
     notification_frame_text_template = newInstance(L, "TextLabel");
@@ -80,7 +83,7 @@ void rbxInstance_StarterGui_init(lua_State* L) {
     setInstanceValue(notification_frame_text_template, L, "BackgroundTransparency", 1.f, true);
     setInstanceValue(notification_frame_text_template, L, "Font", &Enum::enum_map.at("Font").item_map.at("SourceSans"));
     // setInstanceValue(notification_frame_text_template, L, "FontSize", &Enum::enum_map.at("FontSize").item_map.at("Size14"));
-    setInstanceValue(notification_frame_title_template,L, "TextSize", 14.f);
+    setInstanceValue(notification_frame_title_template, L, "TextSize", 12.f);
     setInstanceValue(notification_frame_text_template, L, "TextColor3", Color{235, 235, 235, 255}, true);
     setInstanceValue(notification_frame_text_template, L, "TextWrapped", true, true);
     setInstanceValue(notification_frame_text_template, L, "TextYAlignment", &Enum::enum_map.at("TextYAlignment").item_map.at("Top"));
